@@ -1,8 +1,8 @@
 import pygame
 
 #--constants--
-DISPLAY_WIDTH = 800
-DISPLAY_HEIGHT = 600
+DISPLAY_WIDTH = 1366
+DISPLAY_HEIGHT = 768
 
 BLACK = [0, 0, 0]
 BLUE = [135, 206, 250]
@@ -155,6 +155,10 @@ def switch_levels(alienx, alieny):
         return level_generator(8, 4, alienx, alieny, 8, 60)
     elif level == 3:
         return level_generator(12, 3, alienx, alieny, 50, 37)
+    elif level == 4:
+        return level_generator(3, 10, alienx, alieny, 51, 37)
+    elif level == 5:
+        return level_generator(25, 4, alienx, alieny, 50, 20)
     else:
         pygame.quit()
         quit()
