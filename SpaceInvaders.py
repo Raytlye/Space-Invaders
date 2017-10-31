@@ -1,118 +1,151 @@
 import pygame
-import random
+
+#--constants--
+DISPLAY_WIDTH = 800
+DISPLAY_HEIGHT = 600
+
+BLACK = [0, 0, 0]
+WHITE = [255, 255, 255]
+
+FPS = 60
+
+SPACESHIP = pygame.image.load('images/spaceship.png')
+SPACESHIP = pygame.transform.scale(SPACESHIP, (50,50))
+
+SPACESHIP_WIDTH = 50
+SPACESHIP_HEIGHT = 50
+
+ALIEN_WIDTH = 61
+ALIEN_HEIGHT = 50
+
+BULLET_WIDTH = 10
+BULLET_HEIGHT = 10
+
+#--Class Alien--
+class Alien:
+
+    alienImg = pygame.image.load('images/alien.png')
+    alienImg = pygame.transform.scale(alienImg, (61, 50))
+
+    def __init__(self, x, y, screen):
+        self.screen = screen
+        self.screen_rect = screen.get_rect()
+
+        self.rect = self.alienImg.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+
+        self.dist_x = 3
+        self.dist_y = 0
+
+    def update(self):
+
+        self.rect.x += self.dist_x
+
+        if self.rect.right > self.screen_rect.right:
+            self.dist_x *= -1
+            self.rect.y += 30
+        elif self.rect.left < self.screen_rect.left:
+            self.dist_x *= -1
+            self.rect.y += 30
+
+    def draw(self, screen):
+        screen.blit(self.alienImg, self.rect)
+
+    def check_bullet_collision(self, bullet_x, bullet_y):
+        if bullet_y < self.rect.y + ALIEN_HEIGHT:
+            if bullet_x + BULLET_WIDTH > self.rect.x and bullet_x < self.rect.x + ALIEN_WIDTH:
+                print("Hit")
+                return True
+        else: return False
+
+    def check_user_collision(self, spaceship_x, spaceship_y):
+        if spaceship_y < self.rect.y + ALIEN_HEIGHT:
+            if spaceship_x + SPACESHIP_WIDTH > self.rect.x and spaceship_x < self.rect.x + ALIEN_WIDTH:
+                print("Gotcha")
+                return True
+        else: return False
+
+
+
+def draw_space_ship(x, y, screen):
+    screen.blit(SPACESHIP, (x, y))
+
+def draw_bullet(x, y):
+    pygame.draw.rect(screen, WHITE, (x + 20, y, 10, 10))
 
 pygame.init()
 
-display_width = 800
-display_height = 600
+screen = pygame.display.set_mode((DISPLAY_WIDTH,DISPLAY_HEIGHT))
+screen_rect = screen.get_rect()
 
-black = [0,0,0]
-white = [255,255,255]
+aliens = []
 
-spaceship_width = 50
-spaceship_height = 50
+alienx = 0
+alieny = 500
 
-alien_width = 61
-alien_height = 50
+for i in range(5):
+    aliens.append(Alien(alienx, alieny, screen))
+    alienx += 60
 
-bullet_width = 10
-bullet_height = 10
-
-bulletstate = "ready"
-
-gameDisplay = pygame.display.set_mode((display_width, display_height))
-pygame.display.set_caption("Space Invaders")
 clock = pygame.time.Clock()
 
-spaceshipImg = pygame.image.load('images/spaceship.png')
-spaceshipImg = pygame.transform.scale(spaceshipImg, (50,50))
+running = True
+bullet_state = "Ready"
 
-def drawSpaceShip(x,y):
-    gameDisplay.blit(spaceshipImg,(x,y))
+spaceship_x = (DISPLAY_WIDTH * 0.49)
+spaceship_y = (DISPLAY_HEIGHT * 0.9)
+spaceship_speed = 0
+BULLET_SPEED = 5
 
-class Alien(object):
+while running:
+    if bullet_state == "Ready":
+        bullet_x = spaceship_x
+        bullet_y = spaceship_y
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
 
-    def __init__(self, startX = 0, startY = 0, speed = 3):
-        self.x = startX
-        self.y = startY
-        self.speed = speed
-        self.alienImg = pygame.image.load('images/alien.png')
-        self.alienImg = pygame.transform.scale(self.alienImg, (61, 50))
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_LEFT:
+                spaceship_speed = -5
+            elif event.key == pygame.K_RIGHT:
+                spaceship_speed = 5
+            elif event.key == pygame.K_SPACE:
+                bullet_state = "Shoot"
 
-    def move(self):
-        self.x += self.speed
+        if event.type == pygame.KEYUP:
+            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                spaceship_speed = 0
 
-def shoot(x,y):
-    pygame.draw.rect(gameDisplay, white, (x + 20,y,10,10))
+    spaceship_x += spaceship_speed
+    screen.fill(BLACK)
+    draw_space_ship(spaceship_x, spaceship_y, screen)
 
-def game_loop():
+    if bullet_state == "Shoot":
+        bullet_y -= BULLET_SPEED
+        draw_bullet(bullet_x, bullet_y)
 
-    global bulletstate
-    x = (display_width * 0.49)
-    y = (display_height * 0.9)
-    x_change = 0
+    if spaceship_x > DISPLAY_WIDTH - SPACESHIP_WIDTH:
+        spaceship_x = DISPLAY_WIDTH - SPACESHIP_WIDTH
+    elif spaceship_x < 0:
+        spaceship_x = 0
 
+    if bullet_y < 0:
+        bullet_state = "Ready"
 
-    enemylist = [5]
+    for alien in aliens:
+        alien.update()
 
-    bullet_speed = 5
+    for alien in aliens:
+        alien.draw(screen)
+        aliens = [alien for alien in aliens if not alien.check_bullet_collision(bullet_x, bullet_y)]
+        if alien.check_user_collision(spaceship_x, spaceship_y):
+            pygame.quit()
+            quit()
 
-    while True:
+    pygame.display.update()
 
-        if bulletstate == "ready":
-            bulletx = x
-            bullety = y
-        gameDisplay.fill(black)
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
+    clock.tick(FPS)
 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    x_change = -5
-                elif event.key == pygame.K_RIGHT:
-                    x_change = 5
-                elif event.key == pygame.K_SPACE:
-                    shoot(bulletx,bullety)
-                    bulletstate = "shoot"
-
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                    x_change = 0
-
-        x += x_change
-        if bulletstate == "shoot":
-            bullety -= bullet_speed
-            shoot(bulletx, bullety)
-        drawSpaceShip(x,y)
-        for alien in enemylist:
-            alien.move()
-            gameDisplay.blit(alien.alienImg, alien.x, alien.y)
-
-        if x > display_width - spaceship_width:
-            x = display_width - spaceship_width
-        elif x < 0:
-            x = 0
-
-        # if alien_startx > display_width - alien_width:
-        #     alien_speed *= -1
-        #     alien_starty += 40
-        # elif alien_startx < 0:
-        #     alien_speed *= -1
-        #     alien_starty += 40
-
-        # if bullety < alien_starty + alien_height:
-        #
-        #     if bulletx + bullet_width > alien_startx and bulletx < alien_startx + alien_width:
-        #         print("Hit")
-
-        if bullety < 0:
-            bulletstate = "ready"
-
-
-        pygame.display.update()
-        clock.tick(60)
-
-game_loop()
 pygame.quit()
-quit()
