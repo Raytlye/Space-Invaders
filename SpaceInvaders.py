@@ -1,6 +1,7 @@
 import pygame
+import inputbox
 
-#--constants--
+#constants
 DISPLAY_WIDTH = 1366
 DISPLAY_HEIGHT = 768
 
@@ -22,16 +23,19 @@ ALIEN_HEIGHT = 50
 BULLET_WIDTH = 10
 BULLET_HEIGHT = 10
 
+#global variables
 bullet_state = "Ready"
+level = 0
+score = 0
+adventure = False
+infinite = False
 
-level = 3
-
+#initialising pygame and screen resolution
 pygame.init()
-
 screen = pygame.display.set_mode((DISPLAY_WIDTH,DISPLAY_HEIGHT))
 screen_rect = screen.get_rect()
 
-#--Class Alien--
+#Class Alien
 class Alien:
 
     alienImg = pygame.image.load('images/invader.png')
@@ -48,6 +52,7 @@ class Alien:
         self.dist_x = speed
         self.dist_y = 37
 
+    #move the object on the screen
     def update(self):
 
         self.rect.x += self.dist_x
@@ -59,18 +64,22 @@ class Alien:
             self.dist_x *= -1
             self.rect.y += self.dist_y
 
+    #draw the alien object onto the screen
     def draw(self, screen):
         screen.blit(self.alienImg, self.rect)
 
+    #check if bullet hit an alien-object
     def check_bullet_collision(self, bullet_x, bullet_y):
-        global bullet_state
+        global bullet_state, score
         if bullet_y < self.rect.y + ALIEN_HEIGHT:
             if bullet_x + BULLET_WIDTH > self.rect.x and bullet_x < self.rect.x + ALIEN_WIDTH:
                 print("Hit")
+                score += 1
                 bullet_state = "Ready"
                 return True
         else: return False
 
+    #check if alien-object hit the user
     def check_user_collision(self, spaceship_x, spaceship_y):
         if spaceship_y < self.rect.y + ALIEN_HEIGHT:
             if spaceship_x + SPACESHIP_WIDTH > self.rect.x and spaceship_x < self.rect.x + ALIEN_WIDTH:
@@ -78,17 +87,25 @@ class Alien:
                 return True
         else: return False
 
+def current_score(name):
+    font = pygame.font.SysFont(None, 25)
+    text = font.render(name + ": " + str(score), True, BLACK)
+    screen.blit(text, (0, 0))
+
 def draw_space_ship(x, y, screen):
     screen.blit(SPACESHIP, (x, y))
 
-def draw_bullet(x, y):
+def draw_bullet(x, y, screen):
     pygame.draw.rect(screen, BLUE, (x + 20, y, 10, 10))
 
+#create text_objects for the screen
 def text_objects(text, font):
-    text_surface = font.render(text, True, WHITE)
+    text_surface = font.render(text, True, BLACK)
     return text_surface, text_surface.get_rect()
 
+#intro screen before the game starts
 def game_intro():
+    global adventure, infinite
     intro = True
 
     while intro:
@@ -97,21 +114,30 @@ def game_intro():
                 pygame.quit()
                 quit()
             if event.type == pygame.KEYDOWN:
-                intro = False
+                if event.key == pygame.K_a:
+                    adventure = True
+                    intro = False
+                if event.key == pygame.K_i:
+                    infinite = True
+                    intro = False
+                if event.key == pygame.K_ESCAPE:
+                    pygame.quit()
+                    quit()
 
-        screen.fill(BLACK)
+        screen.fill(WHITE)
         large_text = pygame.font.Font('freesansbold.ttf', 75)
         text_surf, text_rect = text_objects("Space Invaders", large_text)
         text_rect.center = ((DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2))
         screen.blit(text_surf, text_rect)
 
         small_text = pygame.font.Font('freesansbold.ttf', 35)
-        text_surf, text_rect = text_objects("Press any key", small_text)
+        text_surf, text_rect = text_objects("Press a for Advendture, i for Infinite and escape to quit game", small_text)
         text_rect.center = ((DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2 + 50))
 
         screen.blit(text_surf, text_rect)
         pygame.display.update()
 
+#end screen after each level
 def game_exit(text, won):
 
     while True:
@@ -126,7 +152,7 @@ def game_exit(text, won):
                 if event.key == pygame.K_RETURN:
                     game_loop()
 
-        screen.fill(BLACK)
+        screen.fill(WHITE)
         large_text = pygame.font.Font('freesansbold.ttf', 45)
         text_surf, text_rect = text_objects(text, large_text)
         text_rect.center = ((DISPLAY_WIDTH / 2), (DISPLAY_HEIGHT / 2))
@@ -144,6 +170,7 @@ def game_exit(text, won):
         screen.blit(text_surf, text_rect)
         pygame.display.update()
 
+#switches level if one completes one
 def switch_levels(alienx, alieny):
 
     global level
@@ -164,6 +191,7 @@ def switch_levels(alienx, alieny):
         quit()
 
 
+#generates level and reduces hardcoding
 def level_generator(size, speed, alienx, alieny, alienx_add, alieny_add):
     aliens = []
     for i in range(size):
@@ -173,6 +201,7 @@ def level_generator(size, speed, alienx, alieny, alienx_add, alieny_add):
     return aliens
 
 
+#main method
 def game_loop():
 
     global bullet_state, level
@@ -217,7 +246,7 @@ def game_loop():
 
         if bullet_state == "Shoot":
             bullet_y -= bullet_speed
-            draw_bullet(bullet_x, bullet_y)
+            draw_bullet(bullet_x, bullet_y, screen)
 
         if spaceship_x > DISPLAY_WIDTH - SPACESHIP_WIDTH:
             spaceship_x = DISPLAY_WIDTH - SPACESHIP_WIDTH
@@ -244,7 +273,88 @@ def game_loop():
 
         clock.tick(FPS)
 
+def infinite_game():
+
+    global bullet_state, level
+    alienx = 0
+    alieny = 0
+
+    aliens = switch_levels(alienx, alieny)
+
+    clock = pygame.time.Clock()
+
+    running = True
+
+    spaceship_x = (DISPLAY_WIDTH * 0.49)
+    spaceship_y = (DISPLAY_HEIGHT * 0.9)
+    spaceship_speed = 0
+    bullet_speed = 5
+
+    size = 5
+    speed = 3
+
+    name = inputbox.ask(screen, "Your name")
+
+    while running:
+        if bullet_state == "Ready":
+            bullet_x = spaceship_x
+            bullet_y = spaceship_y
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    spaceship_speed = -5
+                elif event.key == pygame.K_RIGHT:
+                    spaceship_speed = 5
+                elif event.key == pygame.K_SPACE:
+                    bullet_state = "Shoot"
+
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                    spaceship_speed = 0
+
+        spaceship_x += spaceship_speed
+        screen.fill(WHITE)
+        draw_space_ship(spaceship_x, spaceship_y, screen)
+        current_score(name)
+
+        if bullet_state == "Shoot":
+            bullet_y -= bullet_speed
+            draw_bullet(bullet_x, bullet_y, screen)
+
+        if spaceship_x > DISPLAY_WIDTH - SPACESHIP_WIDTH:
+            spaceship_x = DISPLAY_WIDTH - SPACESHIP_WIDTH
+        elif spaceship_x < 0:
+            spaceship_x = 0
+
+        if bullet_y < 0:
+            bullet_state = "Ready"
+
+        for alien in aliens:
+            alien.update()
+
+        for alien in aliens:
+            alien.draw(screen)
+            aliens = [alien for alien in aliens if not alien.check_bullet_collision(bullet_x, bullet_y)]
+            if alien.check_user_collision(spaceship_x, spaceship_y):
+                game_exit("You lost...", False)
+
+        if not aliens:
+            size += 1
+            speed += 1
+            aliens = level_generator(size, speed, alienx, alieny, 60, 0)
+
+        pygame.display.update()
+
+        clock.tick(FPS)
+
 game_intro()
-game_loop()
+if adventure:
+    game_loop()
+if infinite:
+    infinite_game()
 pygame.quit()
 quit()
